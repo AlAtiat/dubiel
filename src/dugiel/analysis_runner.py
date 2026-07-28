@@ -70,7 +70,7 @@ def run_entry(entry: ImageEntry, outdir: str, max_dim: int = 2000,
                          title_label=entry.protein_label or "", max_dim=max_dim)
         viz.gel_trend(df, out_path=os.path.join(outdir, f"{name}_trend.png"),
                       ylabel=ylabel)
-        from gelanalyzer import correlate
+        from .gelanalyzer import correlate
         correlate.gel_correlation(entry, os.path.join(outdir, f"{name}_corr.png"))
     except Exception:
         pass

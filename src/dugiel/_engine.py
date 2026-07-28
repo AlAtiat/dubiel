@@ -1,13 +1,13 @@
 """Re-exports from the bundled ``gelanalyzer`` engine.
 
-``gelanalyzer`` is a top-level package that ships alongside ``dugiel`` under
-``src/`` (see ``sources`` in pyproject), so it is always importable — in a dev
-checkout and in the packaged app alike.
+``gelanalyzer`` is bundled *inside* the ``dugiel`` package
+(``src/dugiel/gelanalyzer``), so the app ships as one self-contained package and
+the engine is always importable — in a dev checkout and in the packaged app alike.
 """
 from __future__ import annotations
 
-import gelanalyzer
-from gelanalyzer import (
+from . import gelanalyzer
+from .gelanalyzer import (
     LADDER_LABELS,
     LADDERS,
     GelBox,
@@ -16,9 +16,9 @@ from gelanalyzer import (
     analyze_sds,
     analyze_western,
 )
-from gelanalyzer import viz
-from gelanalyzer.detect import band_signal, detect_gels, load_image
-from gelanalyzer.lanes import apply_transform
+from .gelanalyzer import viz
+from .gelanalyzer.detect import band_signal, detect_gels, load_image
+from .gelanalyzer.lanes import apply_transform
 
 __all__ = [
     "gelanalyzer",

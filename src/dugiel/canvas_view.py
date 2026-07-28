@@ -105,8 +105,17 @@ class CanvasPanel:
         self.status = toga.Label("Add an image to begin.", style=Pack(margin=(0, 6, 4, 6)))
         self.box = toga.Box(style=Pack(direction=COLUMN, flex=1),
                             children=[modes, edit, self.status, self.canvas])
-
+   
     # -- public API -----------------------------------------------------------
+    def preload(self, path: str):
+        """Decode/downscale an image without touching Toga widgets.
+
+        Safe to run on a worker thread. The result is cached by _load_base().
+        """
+        return _load_base(path, self.max_dim)
+    def base_rgb(self, path: str) -> np.ndarray:
+        return _load_base(path, self.max_dim)[0]
+
     def load(self, entry: ImageEntry | None) -> None:
         self.entry = entry
         self.selected = None

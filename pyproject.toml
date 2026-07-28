@@ -26,7 +26,6 @@ icon = "icons/dugiel"
 splash_background_color = "#D3E6F5"
 sources = [
     "src/dugiel",
-    "src/gelanalyzer",
 ]
 test_sources = [
     "tests",

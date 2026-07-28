@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import logging
 import os
 import re
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -18,21 +20,208 @@ from PIL import Image as PILImage
 from toga.style import Pack
 from toga.style.pack import CENTER, COLUMN, ROW
 
-from . import analysis_runner, results_view, session_io, state
-from ._engine import LADDER_LABELS, LADDERS
-from .canvas_view import CanvasPanel, _toga_image
+# The scientific stack (numpy/pandas/scipy/skimage/matplotlib) is pulled in by
+# ._engine/.gelanalyzer and the modules below. Importing it takes several seconds,
+# so it is deferred to _build_ui() — startup() shows a logo splash first, then the
+# background task loads the engine and builds the real UI. These names are filled
+# as module globals in _build_ui; every method that uses them runs post-build.
+analysis_runner = results_view = session_io = state = None  # type: ignore[assignment]
+_toga_image = None  # type: ignore[assignment]
 
 NONE_ITEM = "Manual"
-LADDER_ITEMS = [LADDER_LABELS.get(k, k) for k in LADDERS]
-LABEL_TO_KEY = {LADDER_LABELS.get(k, k): k for k in LADDERS}
-KEY_TO_LABEL = {k: LADDER_LABELS.get(k, k) for k in LADDERS}
+LADDER_ITEMS: list[str] = []          # filled in _build_ui (needs the engine)
+LABEL_TO_KEY: dict[str, str] = {}
+KEY_TO_LABEL: dict[str, str] = {}
 SELECTED_BG = "#3A6EA5"
 THUMB_W, THUMB_H = 110, 80
 
 
+class _LogHandler(logging.Handler):
+    """Feeds every log record into the app's in-memory buffer + Log window.
+
+    Records can arrive from the analyze worker thread, so the widget refresh is
+    marshalled onto the GUI event loop.
+    """
+
+    def __init__(self, app) -> None:
+        super().__init__()
+        self.app = app
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.app._log_lines.append(self.format(record))
+        del self.app._log_lines[:-5000]                       # cap memory
+        loop = getattr(self.app, "loop", None)
+        if loop is not None:
+            loop.call_soon_threadsafe(self.app._refresh_log_view)
+        else:
+            self.app._refresh_log_view()
+
+
+class _StreamToLog:
+    """File-like tee: forwards writes to the original stream (if any) and logs
+    each completed line, so engine ``print()`` and stray tracebacks land in the
+    Log window too."""
+
+    def __init__(self, original, logger: logging.Logger, level: int) -> None:
+        self._original = original
+        self._logger = logger
+        self._level = level
+        self._buf = ""
+
+    def write(self, text: str) -> int:
+        if self._original is not None:
+            try:
+                self._original.write(text)
+            except Exception:
+                pass
+        self._buf += text
+        while "\n" in self._buf:
+            line, self._buf = self._buf.split("\n", 1)
+            if line.strip():
+                self._logger.log(self._level, line)
+        return len(text)
+
+    def flush(self) -> None:
+        if self._original is not None:
+            try:
+                self._original.flush()
+            except Exception:
+                pass
+
+    def isatty(self) -> bool:
+        return bool(getattr(self._original, "isatty", lambda: False)())
+
+
 class Dugiel(toga.App):
     def startup(self) -> None:
-        self._results_root = os.path.join(os.getcwd(), "results")
+        # Write under the app's guaranteed-writable data dir (cwd isn't writable in a
+        # packaged/installed app -> Crop + Analyze would silently fail there).
+        self._results_root = str(self.paths.data / "results")
+        os.makedirs(self._results_root, exist_ok=True)
+
+        self.main_window = toga.MainWindow(
+            title=self.formal_name,
+            size=(1300, 860),
+        )
+        self.main_window.content = self._splash_box()
+        self.main_window.show()
+
+
+    def on_running(self) -> None:
+        self._ui_task = asyncio.create_task(self._build_ui_task())
+
+
+    def _splash_box(self) -> toga.Box:
+        """Logo-only loading screen shown while the scientific stack imports."""
+        logo = toga.Image(str(Path(__file__).parent / "icons" / "dugiel.png"))
+
+        return toga.Box(
+            style=Pack(
+                direction=COLUMN,
+                flex=1,
+                align_items=CENTER,
+            ),
+            children=[
+                toga.Box(style=Pack(flex=1)),
+
+                toga.ImageView(
+                    logo,
+                    style=Pack(width=240),
+                ),
+
+                toga.Label(
+                    "If it doesn't work the second time, go home and try again "
+                    "tomorrow with a clear, fresh mind.",
+                    style=Pack(margin=12),
+                ),
+
+                toga.Box(style=Pack(flex=1)),
+            ],
+        )
+    async def _build_ui_task(self, *args, **kwargs) -> None:
+        await asyncio.sleep(0.05)     # yield once so the splash actually paints
+        self._build_ui()
+
+    # -- logging / log window -------------------------------------------------
+    def _setup_logging(self) -> None:
+        """Route app messages, warnings and caught exceptions to the Log window
+        buffer + a dubiel.log file under the app data dir."""
+        self._log_lines: list[str] = []
+        self._log_window = None
+        self._log_view = None
+        root = logging.getLogger()
+        if not any(isinstance(h, _LogHandler) for h in root.handlers):   # idempotent
+            fmt = logging.Formatter("%(asctime)s  %(levelname)s  %(message)s", "%H:%M:%S")
+            wh = _LogHandler(self)
+            wh.setFormatter(fmt)
+            root.addHandler(wh)
+            try:
+                fh = logging.FileHandler(
+                    os.path.join(str(self.paths.data), "dubiel.log"), encoding="utf-8")
+                fh.setFormatter(fmt)
+                root.addHandler(fh)
+            except OSError:
+                pass
+            root.setLevel(logging.INFO)
+            logging.captureWarnings(True)
+            # Tee stdout/stderr so engine print()s and tracebacks show in the log.
+            if not isinstance(sys.stdout, _StreamToLog):
+                sys.stdout = _StreamToLog(sys.stdout, logging.getLogger("stdout"),
+                                          logging.INFO)
+            if not isinstance(sys.stderr, _StreamToLog):
+                sys.stderr = _StreamToLog(sys.stderr, logging.getLogger("stderr"),
+                                          logging.ERROR)
+        logging.getLogger("dugiel").info("Dubiel started — data dir: %s", self.paths.data)
+
+    def _say(self, msg: str) -> None:
+        """Set the status line and record the message in the log."""
+        self.status.text = msg
+        logging.getLogger("dugiel").info(msg)
+
+    def _fail(self, prefix: str, exc: BaseException) -> None:
+        """Status + full traceback in the log for a caught exception."""
+        self.status.text = f"{prefix}: {exc}"
+        logging.getLogger("dugiel").exception(prefix)
+
+    def _refresh_log_view(self) -> None:
+        if self._log_view is not None:
+            self._log_view.value = "\n".join(self._log_lines)
+            try:
+                self._log_view.scroll_to_bottom()
+            except AttributeError:
+                pass
+
+    def _show_log(self, widget=None) -> None:
+        if self._log_window is not None:
+            self._log_window.show()
+            return
+        self._log_view = toga.MultilineTextInput(
+            readonly=True, value="\n".join(self._log_lines), style=Pack(flex=1))
+        win = toga.Window(title="Dubiel — Log", size=(760, 520))
+        win.content = toga.Box(style=Pack(direction=COLUMN, flex=1),
+                               children=[self._log_view])
+        win.on_close = self._on_log_close
+        self._log_window = win
+        win.show()
+
+    def _on_log_close(self, window=None) -> bool:
+        self._log_window = None
+        self._log_view = None
+        return True
+
+    def _build_ui(self) -> None:
+        # Deferred heavy imports (see module top); publish them as globals so the
+        # rest of the methods — which run only after the UI is built — can use them.
+        global analysis_runner, results_view, session_io, state, _toga_image
+        global LADDER_ITEMS, LABEL_TO_KEY, KEY_TO_LABEL
+        from . import analysis_runner, results_view, session_io, state
+        from ._engine import LADDER_LABELS, LADDERS
+        from .canvas_view import CanvasPanel, _toga_image
+        LADDER_ITEMS = [LADDER_LABELS.get(k, k) for k in LADDERS]
+        LABEL_TO_KEY = {LADDER_LABELS.get(k, k): k for k in LADDERS}
+        KEY_TO_LABEL = {k: LADDER_LABELS.get(k, k) for k in LADDERS}
+
+        self._setup_logging()          # buffer + handlers before the first _say()
         self.session = state.Session(outdir=self._results_root)
         self.current: int | None = None
         self._thumbs: dict[str, toga.Image] = {}
@@ -78,15 +267,14 @@ class Dugiel(toga.App):
             toga.OptionItem("Results", self.result_tabs),
         ], style=Pack(flex=1))
 
-        self.main_window = toga.MainWindow(title=self.formal_name, size=(1300, 860))
         self._build_file_menu()
         top = toga.Box(style=Pack(direction=ROW, flex=1),
                        children=[self._build_panel(), self.tabs])
+        # Swap the splash out for the real UI (window already created + shown).
         self.main_window.content = toga.Box(
             style=Pack(direction=COLUMN),
             children=[top, self._build_bottom_bar()])
         self._refresh_controls()
-        self.main_window.show()
 
     def _build_file_menu(self) -> None:
         f = toga.Group.FILE
@@ -96,6 +284,7 @@ class Dugiel(toga.App):
             toga.Command(self._on_export, text="Export session…", group=f, order=3),
             toga.Command(self._open_results, text="Open results folder",
                          group=f, order=4),
+            toga.Command(self._show_log, text="Show log", group=f, order=5),
         )
 
     # -- layout ---------------------------------------------------------------
@@ -191,10 +380,15 @@ class Dugiel(toga.App):
     # -- thumbnail strip ------------------------------------------------------
     def _thumb_image(self, entry) -> toga.Image:
         if entry.path not in self._thumbs:
-            pil = PILImage.open(entry.path).convert("RGB")
+            rgb = self.canvas.base_rgb(entry.path)
+
+            pil = PILImage.fromarray(rgb)
             pil.thumbnail((THUMB_W * 2, THUMB_H * 2))
+
             import numpy as np
+
             self._thumbs[entry.path] = _toga_image(np.asarray(pil))
+
         return self._thumbs[entry.path]
 
     def _rebuild_thumbnails(self) -> None:
@@ -207,7 +401,7 @@ class Dugiel(toga.App):
                 on_resize=lambda w, width, height, en=e, **k: self._draw_thumb(
                     w, en, width, height))
             bg = SELECTED_BG if i == self.current else "#DDDDDD"
-            rm = toga.Button("✕ remove", style=Pack(height=22),
+            rm = toga.Button("✕", style=Pack(height=22),
                              on_press=lambda w, idx=i: self._on_remove_image(idx))
             self.thumb_strip.add(toga.Box(
                 style=Pack(direction=COLUMN, margin=2, background_color=bg),
@@ -319,13 +513,13 @@ class Dugiel(toga.App):
         try:
             PILImage.fromarray(crop_array).save(path)
         except Exception as exc:  # never crash the canvas on a bad crop
-            self.status.text = f"Crop failed: {exc}"
+            self._fail("Crop failed", exc)
             return
         self.session = state.add_images(self.session, [path])
         self._image_labels = []          # rebuild the dropdown; stay on the original
         self._refresh_controls()
-        self.status.text = (f"Created crop image {self._crop_count} "
-                            f"({os.path.basename(path)}).")
+        self._say(f"Created crop image {self._crop_count} "
+                  f"({os.path.basename(path)}).")
 
     def _on_remove_image(self, index: int) -> None:
         e = self.session.entries[index]
@@ -336,10 +530,13 @@ class Dugiel(toga.App):
         n = len(self.session.entries)
         self._select_current(None if n == 0 else min(index, n - 1))
         self._render_all_results()
-        self.status.text = f"{n} image(s) loaded."
+        self._say(f"{n} image(s) loaded.")
 
     # -- event handlers -------------------------------------------------------
     async def _on_add_images(self, widget) -> None:
+        if self._busy:
+         return
+
         try:
             paths = await self.main_window.dialog(toga.OpenFileDialog(
                 "Add gel / blot images", multiple_select=True,
@@ -349,14 +546,51 @@ class Dugiel(toga.App):
         if not paths:
             return
         paths = [str(p) for p in (paths if isinstance(paths, list) else [paths])]
-        start = len(self.session.entries)
-        self.session = state.add_images(self.session, paths)
-        self._select_current(start)
-        self.status.text = f"{len(self.session.entries)} image(s) loaded."
+        self._busy = True
+        self.busy.start()
+
+        # Let Toga paint the spinner/status before loading.
+        try:
+            # Decode/downscale outside the Toga UI thread.
+            for n, path in enumerate(paths, 1):
+                self._say(
+                    f"Loading {n}/{len(paths)}: "
+                    f"{os.path.basename(path)}…"
+                )
+
+                await self._run(
+                    self.canvas.preload,
+                    path,
+                )
+
+            # only create ImageEntry objects containing paths.
+            start = len(self.session.entries)
+            self.session = state.add_images(self.session, paths)
+
+            # canvas.load() now gets the already-cached image.
+            self._select_current(start)
+
+            self._say(
+                f"{len(self.session.entries)} image(s) loaded."
+            )
+
+        except Exception as exc:
+            self._fail("Image loading failed", exc)
+
+            await self.main_window.dialog(
+                toga.ErrorDialog(
+                    "Image loading failed",
+                    str(exc),
+                )
+            )
+
+        finally:
+            self.busy.stop()
+            self._busy = False
 
     async def _on_export(self, widget) -> None:
         if not self.session.entries:
-            self.status.text = "Add images and configure before exporting."
+            self._say("Add images and configure before exporting.")
             return
         try:
             path = await self.main_window.dialog(toga.SaveFileDialog(
@@ -370,9 +604,10 @@ class Dugiel(toga.App):
         try:
             session_io.export_session(self.session, combine, str(path))
         except Exception as exc:
+            self._fail("Export failed", exc)
             await self.main_window.dialog(toga.ErrorDialog("Export failed", str(exc)))
             return
-        self.status.text = f"Exported session to {os.path.basename(str(path))}."
+        self._say(f"Exported session to {os.path.basename(str(path))}.")
 
     async def _on_import(self, widget) -> None:
         if self._busy:
@@ -390,10 +625,11 @@ class Dugiel(toga.App):
         try:
             session, combine = session_io.import_session(path, data_dir)
         except Exception as exc:
+            self._fail("Import failed", exc)
             await self.main_window.dialog(toga.ErrorDialog("Import failed", str(exc)))
             return
         if not session.entries:
-            self.status.text = "Imported file had no images."
+            self._say("Imported file had no images.")
             return
         # append so several imported sessions sit next to each other
         start = len(self.session.entries)
@@ -406,7 +642,7 @@ class Dugiel(toga.App):
         self._marker_count = 0
         self._select_current(start)  # show the first newly imported image
         self._render_all_results()
-        self.status.text = f"Imported {len(session.entries)} image(s)."
+        self._say(f"Imported {len(session.entries)} image(s).")
 
     def _on_pick_image(self, widget) -> None:
         if self._syncing:
@@ -500,7 +736,7 @@ class Dugiel(toga.App):
         runnable = [i for i, e in enumerate(self.session.entries)
                     if analysis_runner.validate(e) is None]
         if not runnable:
-            self.status.text = "No analyzable image (draw a box on at least one)."
+            self._say("No analyzable image (draw a box on at least one).")
             return
         # fresh dated folder per run so outputs don't overwrite / pile up.
         self.session = state.with_outdir(self.session, self._run_dir())
@@ -510,19 +746,20 @@ class Dugiel(toga.App):
         try:
             for n, i in enumerate(runnable, 1):
                 e = self.session.entries[i]
-                self.status.text = f"Analyzing {n}/{len(runnable)}: " \
-                                   f"{os.path.basename(e.path)}…"
+                self._say(f"Analyzing {n}/{len(runnable)}: "
+                          f"{os.path.basename(e.path)}…")
                 try:
                     df = await self._run(
                         analysis_runner.run_entry, e, self.session.outdir,
                         ylabel=self.ylabel_input.value or "")
                 except Exception as exc:
+                    self._fail(f"Analysis failed for {os.path.basename(e.path)}", exc)
                     await self.main_window.dialog(
                         toga.ErrorDialog("Analysis failed", f"{e.path}\n\n{exc}"))
                     continue
                 self.session = state.update_entry(self.session, i, result_df=df)
             self.tabs.current_tab = 1
-            self.status.text = f"Analyzed {len(runnable)}, skipped {skipped}."
+            self._say(f"Analyzed {len(runnable)}, skipped {skipped}.")
             if sum(e.result_df is not None for e in self.session.entries) >= 2:
                 await self._build_combined()
             self._render_all_results()
@@ -549,19 +786,20 @@ class Dugiel(toga.App):
 
     async def _build_combined(self) -> None:
         analyzed = [e for e in self.session.entries if e.result_df is not None]
-        from gelanalyzer import combine
-        self.status.text = "Building combined results…"
+        from .gelanalyzer import combine
+        self._say("Building combined results…")
         try:
             outputs = await self._run(
                 combine.combine_entries, analyzed, self.session.outdir,
                 error_bars=True, significance=True,
                 ylabel=self.ylabel_input.value or "")
         except Exception as exc:
+            self._fail("Combine failed", exc)
             await self.main_window.dialog(toga.ErrorDialog("Combine failed", str(exc)))
             return
         self._combined = [p for p in outputs
                           if p and p.endswith(".png") and os.path.exists(p)]
-        self.status.text = f"Combined results written to {self.session.outdir}."
+        self._say(f"Combined results written to {self.session.outdir}.")
 
 
 def main() -> Dugiel:
