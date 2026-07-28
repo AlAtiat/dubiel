@@ -15,6 +15,11 @@ from __future__ import annotations
 
 import os
 
+# Pin matplotlib to the headless Agg backend before it is imported (interactive.py
+# imports pyplot, which otherwise picks a GUI backend at import time — a portability
+# risk in the packaged app). Every figure the app renders uses _plot.figure (Agg).
+os.environ.setdefault("MPLBACKEND", "Agg")
+
 import numpy as np
 import pandas as pd
 

@@ -11,6 +11,7 @@ import functools
 import logging
 import os
 import re
+import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -99,9 +100,16 @@ class Dugiel(toga.App):
         self._results_root = str(self.paths.data / "results")
         os.makedirs(self._results_root, exist_ok=True)
 
+        # Clamp to the actual screen so the bottom bar stays visible on small laptops.
+        w, h = 1300, 860
+        try:
+            sw, sh = self.screens[0].size
+            w, h = min(w, int(sw * 0.92)), min(h, int(sh * 0.90))
+        except Exception:
+            pass
         self.main_window = toga.MainWindow(
             title=self.formal_name,
-            size=(1300, 860),
+            size=(w, h),
         )
         self.main_window.content = self._splash_box()
         self.main_window.show()
@@ -496,11 +504,17 @@ class Dugiel(toga.App):
     def _open_results(self, widget=None) -> None:
         # session.outdir is the root results folder before a run, the timestamped
         # run folder after — so this works whether or not anything was analyzed.
-        os.makedirs(self.session.outdir, exist_ok=True)
+        folder = self.session.outdir
+        os.makedirs(folder, exist_ok=True)
         try:
-            os.startfile(self.session.outdir)  # noqa: S606 - Windows; user-requested
-        except (AttributeError, OSError):
-            pass
+            if sys.platform == "win32":
+                os.startfile(folder)  # noqa: S606 - user-requested
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", folder])
+            else:
+                subprocess.Popen(["xdg-open", folder])
+        except Exception as exc:
+            self._fail("Could not open results folder", exc)
 
     def _on_crop(self, crop_array) -> None:
         """A crop region -> a new image entry (the original is kept)."""

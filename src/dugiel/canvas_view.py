@@ -237,6 +237,10 @@ class CanvasPanel:
     def _redraw(self) -> None:
         c = self.canvas
         c.root_state.drawing_actions.clear()
+        # Put drawing into the same logical-pixel space as mouse/resize events: the
+        # winforms backend applies scale(dpi_scale) here, so clicks land correctly at
+        # any Windows display scaling (identity no-op at 100%).
+        c.reset_transform()
         if self._img is None:  # no image yet -> show the placeholder
             self._draw_placeholder(c)
             c.redraw()
