@@ -31,6 +31,8 @@ from . import updates
 analysis_runner = results_view = session_io = state = None  # type: ignore[assignment]
 _toga_image = None  # type: ignore[assignment]
 
+DOCS_URL = "https://dubiel.readthedocs.io/"
+
 NONE_ITEM = "Manual"
 LADDER_ITEMS: list[str] = []          # filled in _build_ui (needs the engine)
 LABEL_TO_KEY: dict[str, str] = {}
@@ -240,6 +242,7 @@ class Dubiel(toga.App):
         self._syncing = False          # suppress on_change while we set widgets
         self._image_labels: list[str] = []
         self._busy = False             # one analyze/combine job at a time
+        self._help_window = None
         
         
         # ALL matplotlib rendering runs on this single thread (mpl isn't
@@ -297,9 +300,43 @@ class Dubiel(toga.App):
             toga.Command(self._show_log, text="Show log", group=f, order=5),
         )
         self.commands.add(
-            toga.Command(self._check_updates, text="Check for Updates…",
+            toga.Command(self._show_help, text="Documentation…",
                          group=toga.Group.HELP, order=1),
+            toga.Command(self._check_updates, text="Check for Updates…",
+                         group=toga.Group.HELP, order=2),
         )
+
+    # -- help / documentation ----------------------------------------------------
+    def _show_help(self, widget=None) -> None:
+        """Open the live Read the Docs page -- single source of truth, no
+        content bundled into the app. Embedded in-app on platforms where Toga's
+        WebView needs no extra system packages (macOS, Windows); Linux opens the
+        system browser instead, since WebView there needs WebKit2GTK, which
+        isn't part of this project's Linux build. Any WebView construction
+        failure falls back to the browser too, so Help always works."""
+        import webbrowser
+
+        if sys.platform.startswith("linux"):
+            webbrowser.open(DOCS_URL)
+            return
+        if self._help_window is not None:
+            self._help_window.show()
+            return
+        try:
+            webview = toga.WebView(url=DOCS_URL, style=Pack(flex=1))
+            win = toga.Window(title="Dubiel — Documentation", size=(900, 700))
+            win.content = toga.Box(style=Pack(direction=COLUMN, flex=1),
+                                   children=[webview])
+        except Exception:
+            webbrowser.open(DOCS_URL)
+            return
+        win.on_close = self._on_help_close
+        self._help_window = win
+        win.show()
+
+    def _on_help_close(self, window=None) -> bool:
+        self._help_window = None
+        return True
 
     # -- update check -----------------------------------------------------------
     async def _check_updates(self, widget: toga.Widget) -> None:
