@@ -183,8 +183,15 @@ def gel_correlation(entry, out_path: Optional[str] = None,
 # combined: protein x lane %-of-control table -> two heatmaps
 # -----------------------------------------------------------------------------
 def _protein_lane_pct(entries: Sequence):
-    """(_proteins, lanes, matrix[protein, lane]) of % of each gel's control lane."""
-    proteins, lane_order, per = [], [], []
+    """(proteins, lanes, matrix[protein, lane]) of % of each gel's control lane.
+
+    Several entries can share one protein_label (replicate gels of the same
+    protein) -- those are averaged into a single row per protein, not kept as
+    separate rows, so replicates don't masquerade as distinct proteins in the
+    correlation heatmaps.
+    """
+    lane_order: list[str] = []
+    per_protein: dict[str, list[dict]] = {}
     for e in entries:
         df = getattr(e, "result_df", None)
         if df is None or getattr(df, "empty", True) or "lane_label" not in df.columns:
@@ -198,16 +205,19 @@ def _protein_lane_pct(entries: Sequence):
                     next(iter(sig.values())))
         ref = ctrl or (max(sig.values()) or 1.0)
         protein = getattr(e, "protein_label", "") or os.path.basename(e.path)
-        proteins.append(protein)
-        per.append({k: v / ref * 100.0 for k, v in sig.items()})
+        per_protein.setdefault(protein, []).append(
+            {k: v / ref * 100.0 for k, v in sig.items()})
         for k in sig:
             if k not in lane_order:
                 lane_order.append(k)
+
+    proteins = list(per_protein)
     mat = np.full((len(proteins), len(lane_order)), np.nan)
-    for r, d in enumerate(per):
+    for r, protein in enumerate(proteins):
         for c, lane in enumerate(lane_order):
-            if lane in d:
-                mat[r, c] = d[lane]
+            vals = [d[lane] for d in per_protein[protein] if lane in d]
+            if vals:
+                mat[r, c] = float(np.mean(vals))
     return proteins, lane_order, mat
 
 

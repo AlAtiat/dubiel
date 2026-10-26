@@ -1,7 +1,7 @@
 """Re-exports from the bundled ``gelanalyzer`` engine.
 
-``gelanalyzer`` is bundled *inside* the ``dugiel`` package
-(``src/dugiel/gelanalyzer``), so the app ships as one self-contained package and
+``gelanalyzer`` is bundled *inside* the ``dubiel`` package
+(``src/dubiel/gelanalyzer``), so the app ships as one self-contained package and
 the engine is always importable — in a dev checkout and in the packaged app alike.
 """
 from __future__ import annotations

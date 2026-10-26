@@ -39,6 +39,8 @@ def validate(entry: ImageEntry) -> Optional[str]:
         return "Draw at least one box before analyzing."
     if len([ln for ln in lanes if ln.is_ladder]) > 1:
         return "Only one box can be the ladder."
+    if any(p.kda is None for p in entry.selection.ladder_points):
+        return "Type a kDa value for every ladder marker (or remove it)."
     return None
 
 

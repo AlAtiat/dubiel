@@ -9,7 +9,7 @@ license-files = ["LICENSE"]
 author = "Aun Al Atiat"
 author_email = "aun@alatiat.com"
 
-[tool.briefcase.app.dugiel]
+[tool.briefcase.app.dubiel]
 formal_name = "Dubiel"
 description = "Western-blot / SDS-PAGE annotator and densitometry quantifier."
 long_description = """Dubiel is a desktop tool for quantifying protein gels and Western
@@ -22,10 +22,10 @@ heatmaps and significance-annotated bar charts.
 Dedicated with gratitude to Prof. Dr. rer. nat. habil. Dawadschargal Dubiel.
 """
 
-icon = "icons/dugiel"
+icon = "icons/dubiel"
 splash_background_color = "#D3E6F5"
 sources = [
-    "src/dugiel",
+    "src/dubiel",
 ]
 test_sources = [
     "tests",
@@ -44,19 +44,19 @@ test_requires = [
     "pytest",
 ]
 
-[tool.briefcase.app.dugiel.macOS]
+[tool.briefcase.app.dubiel.macOS]
 universal_build = true
 requires = [
     "toga-cocoa~=0.5.0",
     "std-nslog~=2.0.0",
 ]
 
-[tool.briefcase.app.dugiel.linux]
+[tool.briefcase.app.dubiel.linux]
 requires = [
     "toga-gtk~=0.5.0",
 ]
 
-[tool.briefcase.app.dugiel.linux.system.debian]
+[tool.briefcase.app.dubiel.linux.system.debian]
 system_requires = [
     # Needed to compile pycairo wheel
     "libcairo2-dev",
@@ -74,7 +74,7 @@ system_runtime_requires = [
     # "gir1.2-webkit2-4.1",
 ]
 
-[tool.briefcase.app.dugiel.linux.system.rhel]
+[tool.briefcase.app.dubiel.linux.system.rhel]
 system_requires = [
     # Needed to compile pycairo wheel
     "cairo-gobject-devel",
@@ -93,7 +93,7 @@ system_runtime_requires = [
     # "webkit2gtk3",
 ]
 
-[tool.briefcase.app.dugiel.linux.system.suse]
+[tool.briefcase.app.dubiel.linux.system.suse]
 system_requires = [
     # Needed to compile pycairo wheel
     "cairo-devel",
@@ -112,7 +112,7 @@ system_runtime_requires = [
     # "libwebkit2gtk3", "typelib(WebKit2)",
 ]
 
-[tool.briefcase.app.dugiel.linux.system.arch]
+[tool.briefcase.app.dubiel.linux.system.arch]
 system_requires = [
     # Needed to compile pycairo wheel
     "cairo",
@@ -139,7 +139,7 @@ system_runtime_requires = [
     # "webkit2gtk",
 ]
 
-[tool.briefcase.app.dugiel.linux.appimage]
+[tool.briefcase.app.dubiel.linux.appimage]
 manylinux = "manylinux_2_28"
 
 system_requires = [
@@ -160,23 +160,23 @@ linuxdeploy_plugins = [
     "DEPLOY_GTK_VERSION=3 gtk",
 ]
 
-[tool.briefcase.app.dugiel.linux.flatpak]
+[tool.briefcase.app.dubiel.linux.flatpak]
 flatpak_runtime = "org.gnome.Platform"
 flatpak_runtime_version = "48"
 flatpak_sdk = "org.gnome.Sdk"
 
-[tool.briefcase.app.dugiel.windows]
+[tool.briefcase.app.dubiel.windows]
 requires = [
     "toga-winforms~=0.5.0",
 ]
 
 # Mobile deployments
-[tool.briefcase.app.dugiel.iOS]
+[tool.briefcase.app.dubiel.iOS]
 requires = [
     "toga-iOS~=0.5.0",
 ]
 
-[tool.briefcase.app.dugiel.android]
+[tool.briefcase.app.dubiel.android]
 requires = [
     "toga-android~=0.5.0",
 ]
@@ -199,12 +199,12 @@ build_gradle_dependencies = [
 # """
 
 # Web deployments
-[tool.briefcase.app.dugiel.web]
+[tool.briefcase.app.dubiel.web]
 requires = [
     "toga-web~=0.5.0",
 ]
 
-# gelanalyzer + dugiel both live under src/, so tests resolve them from there.
+# gelanalyzer + dubiel both live under src/, so tests resolve them from there.
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
