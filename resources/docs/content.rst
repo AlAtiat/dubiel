@@ -4,7 +4,8 @@ Overview
 .. figure:: _static/img/overview.png
    :width: 85.0%
 
-   Annotated gel: boxes per lane, ladder (yellow), and detected bands.
+   Dubiel's Annotate tab on a real gel photo: two lanes (10%, 12%) boxed
+   against a 7-point manual ladder (900-100 kDa).
 
 **Dubiel** is a desktop application that quantifies protein gels and Western
 blots from photographs. Draw a box per lane, tag a molecular-weight ladder,
@@ -12,11 +13,25 @@ and it detects bands, integrates their intensity, calibrates molecular
 weight, and exports labelled tables and publication figures for one gel or
 many at once.
 
+.. figure:: _static/img/invert_real.png
+   :width: 60.0%
+
+   The same boxes with the Invert transform applied -- rotate/flip/invert
+   are applied identically to display and analysis, so coordinates stay
+   aligned.
+
+.. figure:: _static/img/results_real.png
+   :width: 100.0%
+
+   Real Results tab output: the Z profile (electropherogram) for both
+   lanes, overlaid, with detected bands marked.
+
 .. figure:: _static/img/combined_panel.png
    :width: 100.0%
 
-   Combined multi-protein panel: strip, 3D intensity surface, and
-   percent-of-control trend, aligned across proteins and lanes.
+   Combined multi-protein panel (synthetic ground-truth validation
+   example): strip, 3D intensity surface, and percent-of-control trend,
+   aligned across proteins and lanes.
 
 .. note::
    This page is a placeholder. See ``READTHEDOCS_PROMPT.md`` at the project

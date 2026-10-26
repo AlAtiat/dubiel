@@ -34,6 +34,29 @@ figures per gel, and a cross-gel **Combined** comparison once two or more
 gels have been analyzed.
 
 
+The Application
+----------------
+
+Screenshots of Dubiel analyzing a real gel photo — two lanes (10%, 12%) boxed
+against a 7-point manual ladder (900–100 kDa):
+
+.. raw:: html
+
+   <table align="center"><tr>
+   <td align="center"><a href="resources/images/real_gel_source.png"><img src="resources/images/real_gel_source.png" width="180" alt="Source gel photo"/></a><br><sub>Source photo</sub></td>
+   <td align="center"><a href="resources/images/app_annotate_real.png"><img src="resources/images/app_annotate_real.png" width="320" alt="Annotate tab: boxes + manual ladder"/></a><br><sub>Annotate — boxes + ladder</sub></td>
+   <td align="center"><a href="resources/images/app_invert_real.png"><img src="resources/images/app_invert_real.png" width="220" alt="Invert transform applied"/></a><br><sub>Invert transform</sub></td>
+   </tr></table>
+
+   <p align="center"><a href="resources/images/app_results_real.png"><img src="resources/images/app_results_real.png" width="640" alt="Results tab: real Z profile for both lanes"/></a><br><sub>Results — Z profile (electropherogram) for both lanes, bands marked green</sub></p>
+
+Any stain works the same way — here's a second real gel, Coomassie-stained:
+
+.. raw:: html
+
+   <p align="center"><a href="resources/images/real_gel_coomassie.png"><img src="resources/images/real_gel_coomassie.png" width="200" alt="Second real gel example, Coomassie-stained"/></a></p>
+
+
 Scientific Methodology
 -----------------------
 

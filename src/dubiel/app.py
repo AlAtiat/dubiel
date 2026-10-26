@@ -21,6 +21,8 @@ from PIL import Image as PILImage
 from toga.style import Pack
 from toga.style.pack import CENTER, COLUMN, ROW
 
+from . import updates
+
 # The scientific stack (numpy/pandas/scipy/skimage/matplotlib) is pulled in by
 # ._engine/.gelanalyzer and the modules below. Importing it takes several seconds,
 # so it is deferred to _build_ui() — startup() shows a logo splash first, then the
@@ -108,7 +110,7 @@ class Dubiel(toga.App):
         except Exception:
             pass
         self.main_window = toga.MainWindow(
-            title=self.formal_name,
+            title=f"{self.formal_name}  v{updates.current_version()}",
             size=(w, h),
         )
         self.main_window.content = self._splash_box()
@@ -294,6 +296,39 @@ class Dubiel(toga.App):
                          group=f, order=4),
             toga.Command(self._show_log, text="Show log", group=f, order=5),
         )
+        self.commands.add(
+            toga.Command(self._check_updates, text="Check for Updates…",
+                         group=toga.Group.HELP, order=1),
+        )
+
+    # -- update check -----------------------------------------------------------
+    async def _check_updates(self, widget: toga.Widget) -> None:
+        """Manually check GitHub Releases for a newer version (off the UI thread)."""
+        release = await asyncio.to_thread(updates.fetch_latest_release)
+        current = updates.current_version()
+
+        if release is None:
+            await self.main_window.dialog(toga.InfoDialog(
+                "Check for Updates",
+                "Couldn't reach the update server.\n"
+                "Check your internet connection and try again."))
+            return
+
+        latest_tag = str(release.get("tag_name", "")).strip()
+        if not latest_tag or not updates.is_newer(latest_tag, current):
+            await self.main_window.dialog(toga.InfoDialog(
+                "Check for Updates",
+                f"You're up to date.\nInstalled version: {current}"))
+            return
+
+        latest_display = latest_tag.lstrip("vV")
+        open_page = await self.main_window.dialog(toga.QuestionDialog(
+            "Update Available",
+            f"Version {latest_display} is available (you have {current}).\n\n"
+            "Open the download page?"))
+        if open_page:
+            import webbrowser
+            webbrowser.open(str(release.get("html_url") or updates.RELEASES_PAGE))
 
     # -- layout ---------------------------------------------------------------
     def _build_panel(self) -> toga.Box:

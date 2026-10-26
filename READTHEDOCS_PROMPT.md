@@ -37,30 +37,43 @@ toctree; built by Sphinx via `resources/docs/conf.py`, theme
    Spearman + Benjamini-Hochberg FDR, Welch's t-test, exponential decay).
    If something is unclear from the source, write `TODO: confirm — <question>`
    instead of guessing.
-2. **Do not fabricate screenshots or citations.** No GUI screenshots exist
-   yet (the app has not been run and captured on a live desktop as part of
-   this pass) — mark every such spot with
+2. **Do not fabricate screenshots or citations.** Real GUI screenshots now
+   exist (see the `app_*_real.png` / `real_gel_*.png` rows below, captured
+   from the actual running app on a real gel photo) — use those for every
+   "what the app looks like" spot instead of describing an imagined image.
+   If a screen or state isn't covered by one of those (e.g. the Export
+   session dialog, the Log window), mark it with
    `.. TODO: insert a real screenshot of <exact screen/state>` rather than
-   describing an imagined image. Do not invent academic references; Dubiel's
+   inventing a description. Do not invent academic references; Dubiel's
    README cites no external methodology paper, so the Read the Docs page
    should not add one either unless the user supplies a citation.
 3. **Reuse the real example figures already generated** (see list below) —
-   do not ask for new ones or describe different ones. They were produced by
-   running the actual analysis engine (`generate_demo_assets.py`, project
-   root) on a synthetic Western blot with known, ground-truth band
-   intensities and a known ladder (recovered MW-calibration r² > 0.999 in
-   all cases) — so they are safe to present as genuine algorithm output, not
-   mockups.
+   do not ask for new ones or describe different ones. The `TargetProtein_*`
+   / `combined_*` / `decay_halflife.png` figures were produced by running the
+   actual analysis engine (`generate_demo_assets.py`, project root) on a
+   synthetic Western blot with known, ground-truth band intensities and a
+   known ladder (recovered MW-calibration r² > 0.999 in all cases) — present
+   those specifically as a **validation example** (ground truth known, so
+   correctness is checkable), not as "what a real result looks like" on its
+   own. The `app_*_real.png` / `real_gel_*.png` figures are genuine
+   screenshots/photos from an actual analysis run — present those as the
+   "what it looks like in practice" figures.
 
 ## Available real figures (already in `resources/images/`)
 
-Copy the ones you use into `resources/docs/_static/img/` (two are already
-there: `overview.png` = `TargetProtein_overlay.png`, `combined_panel.png` =
-`combined_panel_3d.png`) and reference them with Sphinx `.. figure::`
-directives, numbered captions (numfig is on).
+Copy the ones you use into `resources/docs/_static/img/` (four are already
+there: `overview.png` = `app_annotate_real.png`, `invert_real.png` =
+`app_invert_real.png`, `results_real.png` = `app_results_real.png`,
+`combined_panel.png` = `combined_panel_3d.png`) and reference them with
+Sphinx `.. figure::` directives, numbered captions (numfig is on).
 
 | File | What it shows |
 |---|---|
+| `app_annotate_real.png` | **Real screenshot.** Annotate tab: a real gel photo loaded, 2 lanes boxed (10%, 12%), a 7-point manual ladder typed in (900-100 kDa) |
+| `app_invert_real.png` | **Real screenshot.** The same boxes with the Invert transform applied |
+| `app_results_real.png` | **Real screenshot.** Results tab: the real Z profile (electropherogram) for both lanes, with detected bands marked |
+| `real_gel_source.png` | **Real photo.** The source gel photo loaded in the screenshots above |
+| `real_gel_coomassie.png` | **Real photo.** A second real gel, Coomassie-stained, showing the tool isn't stain-specific |
 | `TargetProtein_overlay.png` | Annotated source image: ladder box (yellow) with 5 marker bands, 4 sample lanes (Control/MG132/MLN4924/Bortezomib) with detected bands marked red |
 | `TargetProtein_overlay_profile.png` | Electropherogram: intensity-vs-Rf curve per lane, overlaid, with the source strip beneath each curve |
 | `TargetProtein_montage.png` | Cropped band montage, one tile per lane |
@@ -91,17 +104,23 @@ Path from `resources/docs/*.rst` to these originals is `../images/<file>`.
    one subsection per platform, plus a note that links always point to the
    latest GitHub Release.
 3. **How to Use** — the 6-step workflow from the README (add images → line
-   up → crop → mark lanes/ladder → analyze → read results), as prose with
-   `TODO: insert a real screenshot of <step>` placeholders at: the main
-   window with images loaded, the box/ladder annotation screen, and the
-   Results tabs. Do not describe pixel-level UI layout you haven't seen —
-   describe only the behavior documented in the README.
-4. **Examples** — walk through the synthetic ground-truth example using the
-   real figures listed above, in this order: single-gel overlay → per-lane
-   electropherogram → montage → 3D surface → per-gel correlation → combined
-   multi-protein panel (`combined_panel_3d.png`) → statistics with
+   up → crop → mark lanes/ladder → analyze → read results), illustrated with
+   the real screenshots: `app_annotate_real.png` at the box/ladder annotation
+   step, `app_invert_real.png` at the "line up" step, `app_results_real.png`
+   at the "read results" step. Only describe UI elements actually visible in
+   those screenshots (box list, ladder kDa fields, Analyze button, Z-profile
+   plot) — for any step not covered by a screenshot (e.g. the Export session
+   dialog, the Log window), use `.. TODO: insert a real screenshot of <step>`
+   rather than inventing the layout.
+4. **Examples** — two parts. First, the real example: walk through
+   `real_gel_source.png` → `app_annotate_real.png` → `app_invert_real.png` →
+   `app_results_real.png`, in that order, as "here's an actual analysis run
+   end to end." Then, the ground-truth validation example: walk through the
+   synthetic figures listed above, in this order: single-gel overlay →
+   per-lane electropherogram → montage → 3D surface → per-gel correlation →
+   combined multi-protein panel (`combined_panel_3d.png`) → statistics with
    significance → cross-protein/treatment correlation → decay/half-life.
-   For each figure, state what ground truth was used (see
+   For each synthetic figure, state what ground truth was used (see
    `generate_demo_assets.py`: `LADDER_KDA`, `TRUE_PCT`, `LANES`) and that the
    recovered values matched it (MW-calibration r² > 0.999; decay r² ≈ 0.998).
 5. **Deep Dive** — the full scientific methodology from the README's

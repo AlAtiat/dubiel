@@ -55,6 +55,10 @@ requires = [
 [tool.briefcase.app.dubiel.linux]
 requires = [
     "toga-gtk~=0.5.0",
+    # PyGObject 3.52.1 enforces a requirement on libgirepository-2.0-dev, which
+    # isn't available on the manylinux_2_28 / Debian 12 build images. See
+    # beeware/toga#3143.
+    "pygobject < 3.52.1",
 ]
 
 [tool.briefcase.app.dubiel.linux.system.debian]
@@ -141,7 +145,7 @@ system_runtime_requires = [
 ]
 
 [tool.briefcase.app.dubiel.linux.appimage]
-manylinux = "manylinux_2_28"
+manylinux = "manylinux_2_34"
 
 system_requires = [
     # Needed to compile pycairo wheel
