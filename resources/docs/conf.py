@@ -13,7 +13,10 @@ extensions = [
 ]
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+# content.rst is the single source every other page ".. include::"s slices of
+# (see overview.rst/download.rst/etc.) -- excluded here so it isn't ALSO built
+# as its own redundant, unlinked page.
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'content.rst']
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']

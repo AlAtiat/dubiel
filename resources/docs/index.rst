@@ -5,4 +5,9 @@ Dubiel
    :maxdepth: 2
    :caption: Contents:
 
-   content
+   overview
+   download
+   usage
+   examples
+   methodology
+   framework
