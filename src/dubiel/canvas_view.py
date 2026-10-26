@@ -206,7 +206,7 @@ class CanvasPanel:
     # -- drawing --------------------------------------------------------------
     def _placeholder_logo(self):
         if not hasattr(self, "_ph_logo"):
-            p = Path(__file__).parent / "icons" / "dugiel.png"
+            p = Path(__file__).parent / "icons" / "dubiel.png"
             try:
                 self._ph_logo = toga.Image(str(p)) if p.exists() else None
             except Exception:  # pragma: no cover - decode/backend issue

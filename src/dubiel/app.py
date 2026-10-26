@@ -93,7 +93,7 @@ class _StreamToLog:
         return bool(getattr(self._original, "isatty", lambda: False)())
 
 
-class Dugiel(toga.App):
+class Dubiel(toga.App):
     def startup(self) -> None:
         # Write under the app's guaranteed-writable data dir (cwd isn't writable in a
         # packaged/installed app -> Crop + Analyze would silently fail there).
@@ -121,7 +121,7 @@ class Dugiel(toga.App):
 
     def _splash_box(self) -> toga.Box:
         """Logo-only loading screen shown while the scientific stack imports."""
-        logo = toga.Image(str(Path(__file__).parent / "icons" / "dugiel.png"))
+        logo = toga.Image(str(Path(__file__).parent / "icons" / "dubiel.png"))
 
         return toga.Box(
             style=Pack(
@@ -179,17 +179,17 @@ class Dugiel(toga.App):
             if not isinstance(sys.stderr, _StreamToLog):
                 sys.stderr = _StreamToLog(sys.stderr, logging.getLogger("stderr"),
                                           logging.ERROR)
-        logging.getLogger("dugiel").info("Dubiel started — data dir: %s", self.paths.data)
+        logging.getLogger("dubiel").info("Dubiel started — data dir: %s", self.paths.data)
 
     def _say(self, msg: str) -> None:
         """Set the status line and record the message in the log."""
         self.status.text = msg
-        logging.getLogger("dugiel").info(msg)
+        logging.getLogger("dubiel").info(msg)
 
     def _fail(self, prefix: str, exc: BaseException) -> None:
         """Status + full traceback in the log for a caught exception."""
         self.status.text = f"{prefix}: {exc}"
-        logging.getLogger("dugiel").exception(prefix)
+        logging.getLogger("dubiel").exception(prefix)
 
     def _refresh_log_view(self) -> None:
         if self._log_view is not None:
@@ -816,11 +816,11 @@ class Dugiel(toga.App):
         self._say(f"Combined results written to {self.session.outdir}.")
 
 
-def main() -> Dugiel:
-    icon_base = Path(__file__).parent / "icons" / "dugiel"
+def main() -> Dubiel:
+    icon_base = Path(__file__).parent / "icons" / "dubiel"
     about = ("Western-blot / SDS-PAGE Analysis "
              "Dedicated with gratitude to "
              "Prof. Dr. rer. nat. habil. Dawadschargal Dubiel.")
     if icon_base.with_suffix(".ico").exists() or icon_base.with_suffix(".png").exists():
-        return Dugiel("Dubiel", "com.dugiel", icon=str(icon_base), description=about)
-    return Dugiel("Dubiel", "com.dugiel", description=about)
+        return Dubiel("Dubiel", "com.dubiel", icon=str(icon_base), description=about)
+    return Dubiel("Dubiel", "com.dubiel", description=about)

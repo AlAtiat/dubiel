@@ -1,4 +1,4 @@
-from dugiel.app import main
+from dubiel.app import main
 
 if __name__ == "__main__":
     main().main_loop()

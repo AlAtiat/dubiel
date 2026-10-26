@@ -1,0 +1,10 @@
+image,gel_label,lane_label,is_ladder,band_idx,y_px,band_x,mw_kda,rf,manual,raw_intensity,volume,adjusted_volume,lane_total,pct_of_lane
+TargetProtein,TargetProtein,Ladder,True,0,39,60,99.68,0.0378,False,4.13,4.13,4.13,20.53,20.11
+TargetProtein,TargetProtein,Ladder,True,1,125,60,70.22,0.2703,False,4.07,4.07,4.07,20.53,19.82
+TargetProtein,TargetProtein,Ladder,True,2,209,60,49.88,0.4973,False,4.09,4.09,4.09,20.53,19.94
+TargetProtein,TargetProtein,Ladder,True,3,294,60,35.28,0.727,False,4.11,4.11,4.11,20.53,20.02
+TargetProtein,TargetProtein,Ladder,True,4,380,60,24.86,0.9595,False,4.13,4.13,4.13,20.53,20.11
+TargetProtein,TargetProtein,Control,False,0,150,150,63.43,0.3421,False,5.26,5.26,5.26,5.26,100.0
+TargetProtein,TargetProtein,MG132,False,0,147,240,64.21,0.3342,False,2.15,2.15,2.15,2.15,100.0
+TargetProtein,TargetProtein,MLN4924,False,0,148,330,63.95,0.3368,False,3.47,3.47,3.47,3.47,100.0
+TargetProtein,TargetProtein,Bortezomib,False,0,148,420,63.95,0.3368,False,1.44,1.44,1.44,1.44,100.0

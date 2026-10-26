@@ -1,5 +1,17 @@
-# Dugiel Release Notes
+# Dubiel Release Notes
 
 ## 0.0.1 (21 Jul 2026)
 
 * Initial release
+* Renamed the package/app from `dugiel` to `Dubiel` throughout (icons, bundle
+  id, module layout) ahead of the public release
+* Fixed a `.gitignore` bug that had excluded the entire `tests/` suite from
+  version control since the first commit
+* Fixed `analysis_runner.validate()` to reject an incomplete manual ladder
+  (a marker clicked without a typed kDa value), matching its documented
+  contract
+* Fixed `correlate._protein_lane_pct()` to average replicate gels of the same
+  protein into one row instead of double-counting them as distinct proteins
+  in the combined correlation heatmaps
+* Added GitHub Actions build-and-release workflow (Windows MSI, macOS DMG
+  arm64/x86_64, Linux AppImage) and a Read the Docs scaffold
