@@ -40,7 +40,11 @@ jobs:
       - name: Install Briefcase
         run: |
           python -m pip install -U pip
-          python -m pip install -U briefcase
+          # Pinned (not "-U"): briefcase 0.4.6 has a regression in `create linux
+          # appimage` ("Briefcase configuration error: ... 'OrderedDict' object
+          # has no attribute 'host_arch'"). 0.4.4 is the version that generated
+          # this project's Briefcase template and is known to work.
+          python -m pip install "briefcase==0.4.4"
 
       # --- Create ---
       - name: Create (Linux)
